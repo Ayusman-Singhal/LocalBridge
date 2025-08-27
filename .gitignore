@@ -20,9 +20,4 @@ coverage.xml
 .mypy_cache
 .pytest_cache
 .hypothesis
-
-# Project specific
-uploads/
-data/
-notes.txt
-app.py
+logs/

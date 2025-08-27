@@ -1,6 +1,25 @@
 # LocalBridge
 
-A self-hosted web application for seamless file transfer, clipboard synchronization, and text sharing between PC and mobile devices over a local network.
+A self-hosted web application for seamless file transfer, clipboa## Usage
+
+1. Start the application using one of the methods above
+2. The application will start and display the local network URL (e.g., http://192.168.1.100:5000)
+3. Open the URL in your mobile browser
+4. Use the interface to:
+   - Upload files by dragging/dropping or selecting
+   - View available files for download
+   - Sync clipboard content
+   - Share quick notes
+
+## Logging
+
+The application logs all activities to hourly-rotated log files in the `logs/` directory:
+- **Log Location**: `logs/localbridge.log`
+- **Rotation**: New log file created every hour
+- **Retention**: Last 24 hours of logs kept
+- **Log Levels**: INFO for important events, ERROR for issues, DEBUG for detailed operations
+
+Check the logs for troubleshooting or monitoring application usage.nization, and text sharing between PC and mobile devices over a local network.
 
 ## Features
 
