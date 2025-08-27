@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LocalBridge</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="/static/css/style.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container-fluid py-4">
+        <div class="row">
+            <div class="col-12">
+                <h1 class="text-center mb-4"><i class="fas fa-bridge"></i> LocalBridge</h1>
+                <p class="text-center text-muted mb-5">Seamless file transfer, clipboard sync, and text sharing over local network</p>
+            </div>
+        </div>
+
+        <div class="row">
+            <!-- File Transfer Section -->
+            <div class="col-lg-6 mb-4">
+                <div class="card h-100">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0"><i class="fas fa-file-upload"></i> File Transfer</h5>
+                    </div>
+                    <div class="card-body">
+                        <!-- Upload Area -->
+                        <div id="uploadArea" class="upload-area mb-3">
+                            <div class="upload-content">
+                                <i class="fas fa-cloud-upload-alt fa-3x text-muted mb-3"></i>
+                                <p>Drag & drop files here or click to select</p>
+                                <input type="file" id="fileInput" multiple style="display: none;">
+                                <button class="btn btn-primary" onclick="document.getElementById('fileInput').click()">Choose Files</button>
+                            </div>
+                        </div>
+                        <div id="uploadProgress" class="progress mb-3" style="display: none;">
+                            <div class="progress-bar" role="progressbar" style="width: 0%"></div>
+                        </div>
+                        <div id="uploadStatus" class="alert" style="display: none;"></div>
+
+                        <!-- File List -->
+                        <h6>Available Files:</h6>
+                        <div id="fileList" class="list-group"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Clipboard & Notes Section -->
+            <div class="col-lg-6">
+                <div class="row">
+                    <!-- Clipboard Section -->
+                    <div class="col-12 mb-4">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="card-title mb-0"><i class="fas fa-clipboard"></i> Clipboard Sync</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="mb-3">
+                                    <label for="clipboardContent" class="form-label">PC Clipboard Content:</label>
+                                    <textarea class="form-control" id="clipboardContent" rows="3" readonly></textarea>
+                                    <button class="btn btn-sm btn-outline-secondary mt-2" onclick="refreshClipboard()">Refresh</button>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="clipboardInput" class="form-label">Set PC Clipboard:</label>
+                                    <textarea class="form-control" id="clipboardInput" rows="3" placeholder="Enter text to copy to PC clipboard"></textarea>
+                                    <button class="btn btn-primary mt-2" onclick="setClipboard()">Copy to PC</button>
+                                </div>
+                                <div id="clipboardStatus" class="alert" style="display: none;"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Notes Section -->
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="card-title mb-0"><i class="fas fa-sticky-note"></i> Quick Notes</h5>
+                            </div>
+                            <div class="card-body">
+                                <textarea class="form-control" id="notesContent" rows="6" placeholder="Shared notes - changes are saved automatically"></textarea>
+                                <div id="notesStatus" class="alert alert-info mt-2" style="display: none;"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/static/js/app.js"></script>
+</body>
+</html>
