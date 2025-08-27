@@ -4,6 +4,7 @@ import socket
 import pyperclip
 from werkzeug.utils import secure_filename
 import logging
+from logging.handlers import TimedRotatingFileHandler
 from pathlib import Path
 
 # Get the project root directory (parent of app directory)
@@ -25,9 +26,46 @@ app.config['MAX_CONTENT_LENGTH'] = MAX_FILE_SIZE
 # Ensure directories exist
 Path(UPLOAD_FOLDER).mkdir(exist_ok=True)
 Path(PROJECT_ROOT / 'data').mkdir(exist_ok=True)
+Path(PROJECT_ROOT / 'logs').mkdir(exist_ok=True)
 
-# Logging
-logging.basicConfig(level=logging.INFO)
+# Logging Configuration
+def setup_logging():
+    # Create logger
+    logger = logging.getLogger()
+    logger.setLevel(logging.INFO)
+
+    # Remove default handlers
+    for handler in logger.handlers[:]:
+        logger.removeHandler(handler)
+
+    # Create timed rotating file handler (rotates every hour)
+    log_file = str(PROJECT_ROOT / 'logs' / 'localbridge.log')
+    file_handler = TimedRotatingFileHandler(
+        log_file,
+        when='H',      # Rotate every hour
+        interval=1,    # Every 1 hour
+        backupCount=24 # Keep 24 hours of logs
+    )
+
+    # Create formatter
+    formatter = logging.Formatter(
+        '%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+        datefmt='%Y-%m-%d %H:%M:%S'
+    )
+    file_handler.setFormatter(formatter)
+
+    # Add handler to logger
+    logger.addHandler(file_handler)
+
+    # Disable Werkzeug access logging to console
+    werkzeug_logger = logging.getLogger('werkzeug')
+    werkzeug_logger.setLevel(logging.WARNING)
+    werkzeug_logger.handlers = []  # Remove all handlers
+
+    return logger
+
+# Setup logging
+app_logger = setup_logging()
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
@@ -59,9 +97,10 @@ def list_files():
                     'size': os.path.getsize(filepath),
                     'url': f'/api/files/{filename}'
                 })
+        app_logger.info(f"Listed {len(files)} files")
         return jsonify(files)
     except Exception as e:
-        logging.error(f"Error listing files: {e}")
+        app_logger.error(f"Error listing files: {e}")
         return jsonify({'error': 'Failed to list files'}), 500
 
 @app.route('/api/files', methods=['POST'])
@@ -75,27 +114,38 @@ def upload_file():
         filename = secure_filename(file.filename)
         filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         file.save(filepath)
+        file_size = os.path.getsize(filepath)
+        app_logger.info(f"File uploaded: {filename} ({file_size} bytes)")
         return jsonify({'message': 'File uploaded successfully', 'filename': filename}), 200
     else:
+        app_logger.warning(f"Rejected file upload: {file.filename if file else 'None'}")
         return jsonify({'error': 'File type not allowed'}), 400
 
 @app.route('/api/files/<filename>', methods=['GET'])
 def download_file(filename):
     try:
+        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        if os.path.exists(filepath):
+            file_size = os.path.getsize(filepath)
+            app_logger.info(f"File downloaded: {filename} ({file_size} bytes)")
         return send_from_directory(app.config['UPLOAD_FOLDER'], filename, as_attachment=True)
     except FileNotFoundError:
+        app_logger.warning(f"File not found for download: {filename}")
         return jsonify({'error': 'File not found'}), 404
     except Exception as e:
-        logging.error(f"Error downloading file: {e}")
+        app_logger.error(f"Error downloading file {filename}: {e}")
         return jsonify({'error': 'Failed to download file'}), 500
 
 @app.route('/api/clipboard', methods=['GET'])
 def get_clipboard():
     try:
         content = pyperclip.paste()
+        # Only log if there's actual content and it's not too frequent
+        if content and len(content.strip()) > 0:
+            app_logger.debug(f"Clipboard accessed: {len(content)} characters")
         return jsonify({'content': content})
     except Exception as e:
-        logging.error(f"Error getting clipboard: {e}")
+        app_logger.error(f"Error getting clipboard: {e}")
         return jsonify({'error': 'Failed to get clipboard content'}), 500
 
 @app.route('/api/clipboard', methods=['POST'])
@@ -104,10 +154,12 @@ def set_clipboard():
     if not data or 'content' not in data:
         return jsonify({'error': 'No content provided'}), 400
     try:
-        pyperclip.copy(data['content'])
+        content = data['content']
+        pyperclip.copy(content)
+        app_logger.info(f"Clipboard updated: {len(content)} characters")
         return jsonify({'message': 'Clipboard updated successfully'}), 200
     except Exception as e:
-        logging.error(f"Error setting clipboard: {e}")
+        app_logger.error(f"Error setting clipboard: {e}")
         return jsonify({'error': 'Failed to update clipboard'}), 500
 
 @app.route('/api/notes', methods=['GET'])
@@ -118,9 +170,12 @@ def get_notes():
                 content = f.read()
         else:
             content = ''
+        # Only log if there are notes
+        if content and len(content.strip()) > 0:
+            app_logger.debug(f"Notes accessed: {len(content)} characters")
         return jsonify({'content': content})
     except Exception as e:
-        logging.error(f"Error getting notes: {e}")
+        app_logger.error(f"Error getting notes: {e}")
         return jsonify({'error': 'Failed to get notes'}), 500
 
 @app.route('/api/notes', methods=['POST'])
@@ -129,11 +184,13 @@ def set_notes():
     if not data or 'content' not in data:
         return jsonify({'error': 'No content provided'}), 400
     try:
+        content = data['content']
         with open(NOTES_FILE, 'w', encoding='utf-8') as f:
-            f.write(data['content'])
+            f.write(content)
+        app_logger.info(f"Notes updated: {len(content)} characters")
         return jsonify({'message': 'Notes updated successfully'}), 200
     except Exception as e:
-        logging.error(f"Error setting notes: {e}")
+        app_logger.error(f"Error setting notes: {e}")
         return jsonify({'error': 'Failed to update notes'}), 500
 
 if __name__ == '__main__':
@@ -149,13 +206,17 @@ if __name__ == '__main__':
     while True:
         try:
             local_ip = get_local_ip()
+            app_logger.info(f"LocalBridge server starting on http://{local_ip}:{port}")
             print(f"LocalBridge is running at: http://{local_ip}:{port}")
             print(f"Access from your mobile device using the above URL")
-            app.run(host='0.0.0.0', port=port, debug=True)
+            print(f"Logs are being written to: {PROJECT_ROOT / 'logs' / 'localbridge.log'}")
+            app.run(host='0.0.0.0', port=port, debug=False)  # Disable debug mode to reduce console output
             break
         except OSError as e:
             if e.errno == 48:  # Address already in use
+                app_logger.warning(f"Port {port} is in use, trying {port + 1}")
                 print(f"Port {port} is in use, trying {port + 1}")
                 port += 1
             else:
+                app_logger.error(f"Failed to start server: {e}")
                 raise
