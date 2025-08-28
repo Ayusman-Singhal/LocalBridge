@@ -28,16 +28,39 @@ document.addEventListener('DOMContentLoaded', function() {
         uploadFiles(files);
     });
     
-    // Notes auto-save
+    // Notes auto-save and idle detection
     const notesTextarea = document.getElementById('notesContent');
     let notesTimeout;
+    let notesIdleTimeout;
+    let isNotesIdle = true;
+    let notesRefreshInterval;
+    
     notesTextarea.addEventListener('input', function() {
+        // Mark as not idle when user starts typing
+        isNotesIdle = false;
+        
+        // Clear existing timeouts
         clearTimeout(notesTimeout);
+        clearTimeout(notesIdleTimeout);
+        
+        // Set auto-save timeout
         notesTimeout = setTimeout(saveNotes, 500);
+        
+        // Set idle timeout - resume refresh after 2 seconds of no typing
+        notesIdleTimeout = setTimeout(() => {
+            isNotesIdle = true;
+        }, 2000);
     });
     
     // Clipboard refresh every 2 seconds
     setInterval(refreshClipboard, 2000);
+    
+    // Notes refresh with idle detection
+    notesRefreshInterval = setInterval(() => {
+        if (isNotesIdle) {
+            loadNotes();
+        }
+    }, 3000);
 });
 
 function uploadFiles(files) {
