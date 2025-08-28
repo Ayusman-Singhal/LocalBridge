@@ -57,14 +57,25 @@
                             </div>
                             <div class="card-body">
                                 <div class="mb-3">
-                                    <label for="clipboardContent" class="form-label">PC Clipboard Content:</label>
-                                    <textarea class="form-control" id="clipboardContent" rows="3" readonly></textarea>
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <label for="clipboardContent" class="form-label mb-0" id="clipboardDisplayLabel">Mobile Clipboard Content:</label>
+                                        <div class="btn-group btn-group-sm" role="group">
+                                            <button type="button" class="btn btn-outline-primary" id="deviceBtnPC" onclick="setDeviceType('pc')">PC</button>
+                                            <button type="button" class="btn btn-outline-primary" id="deviceBtnMobile" onclick="setDeviceType('mobile')">Mobile</button>
+                                        </div>
+                                    </div>
+                                    <div class="input-group">
+                                        <textarea class="form-control" id="clipboardContent" rows="3" readonly></textarea>
+                                        <button class="btn btn-outline-secondary" type="button" onclick="copyToClipboard()" title="Copy to device clipboard" id="copyBtn">
+                                            <i class="fas fa-copy"></i>
+                                        </button>
+                                    </div>
                                     <button class="btn btn-sm btn-outline-secondary mt-2" onclick="refreshClipboard()">Refresh</button>
                                 </div>
                                 <div class="mb-3">
-                                    <label for="clipboardInput" class="form-label">Set PC Clipboard:</label>
-                                    <textarea class="form-control" id="clipboardInput" rows="3" placeholder="Enter text to copy to PC clipboard"></textarea>
-                                    <button class="btn btn-primary mt-2" onclick="setClipboard()">Copy to PC</button>
+                                    <label for="clipboardInput" class="form-label" id="clipboardInputLabel">Set Mobile Clipboard:</label>
+                                    <textarea class="form-control" id="clipboardInput" rows="3" placeholder="Enter text to copy to mobile clipboard"></textarea>
+                                    <button class="btn btn-primary mt-2" onclick="setClipboard()" id="setClipboardBtn">Copy to Mobile</button>
                                 </div>
                                 <div id="clipboardStatus" class="alert" style="display: none;"></div>
                             </div>

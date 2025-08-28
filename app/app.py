@@ -17,6 +17,8 @@ app = Flask(__name__,
 # Configuration
 UPLOAD_FOLDER = str(PROJECT_ROOT / 'uploads')
 NOTES_FILE = str(PROJECT_ROOT / 'data' / 'notes.txt')
+PC_CLIPBOARD_FILE = str(PROJECT_ROOT / 'data' / 'pc_clipboard.txt')
+MOBILE_CLIPBOARD_FILE = str(PROJECT_ROOT / 'data' / 'mobile_clipboard.txt')
 ALLOWED_EXTENSIONS = {'txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'zip', 'rar'}
 MAX_FILE_SIZE = 500 * 1024 * 1024  # 500MB
 
@@ -161,6 +163,62 @@ def set_clipboard():
     except Exception as e:
         app_logger.error(f"Error setting clipboard: {e}")
         return jsonify({'error': 'Failed to update clipboard'}), 500
+
+@app.route('/api/clipboard/pc', methods=['GET'])
+def get_pc_clipboard():
+    try:
+        if os.path.exists(PC_CLIPBOARD_FILE):
+            with open(PC_CLIPBOARD_FILE, 'r', encoding='utf-8') as f:
+                content = f.read()
+        else:
+            content = ''
+        return jsonify({'content': content})
+    except Exception as e:
+        app_logger.error(f"Error getting PC clipboard: {e}")
+        return jsonify({'error': 'Failed to get PC clipboard content'}), 500
+
+@app.route('/api/clipboard/pc', methods=['POST'])
+def set_pc_clipboard():
+    data = request.get_json()
+    if not data or 'content' not in data:
+        return jsonify({'error': 'No content provided'}), 400
+    try:
+        content = data['content']
+        with open(PC_CLIPBOARD_FILE, 'w', encoding='utf-8') as f:
+            f.write(content)
+        app_logger.info(f"PC clipboard updated: {len(content)} characters")
+        return jsonify({'message': 'PC clipboard updated successfully'}), 200
+    except Exception as e:
+        app_logger.error(f"Error setting PC clipboard: {e}")
+        return jsonify({'error': 'Failed to update PC clipboard'}), 500
+
+@app.route('/api/clipboard/mobile', methods=['GET'])
+def get_mobile_clipboard():
+    try:
+        if os.path.exists(MOBILE_CLIPBOARD_FILE):
+            with open(MOBILE_CLIPBOARD_FILE, 'r', encoding='utf-8') as f:
+                content = f.read()
+        else:
+            content = ''
+        return jsonify({'content': content})
+    except Exception as e:
+        app_logger.error(f"Error getting mobile clipboard: {e}")
+        return jsonify({'error': 'Failed to get mobile clipboard content'}), 500
+
+@app.route('/api/clipboard/mobile', methods=['POST'])
+def set_mobile_clipboard():
+    data = request.get_json()
+    if not data or 'content' not in data:
+        return jsonify({'error': 'No content provided'}), 400
+    try:
+        content = data['content']
+        with open(MOBILE_CLIPBOARD_FILE, 'w', encoding='utf-8') as f:
+            f.write(content)
+        app_logger.info(f"Mobile clipboard updated: {len(content)} characters")
+        return jsonify({'message': 'Mobile clipboard updated successfully'}), 200
+    except Exception as e:
+        app_logger.error(f"Error setting mobile clipboard: {e}")
+        return jsonify({'error': 'Failed to update mobile clipboard'}), 500
 
 @app.route('/api/notes', methods=['GET'])
 def get_notes():

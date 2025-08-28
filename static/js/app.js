@@ -1,60 +1,118 @@
+// Device type management
+let currentDeviceType = 'pc'; // Default to PC
+
+function detectDeviceType() {
+    // Simple device detection based on screen size and user agent
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+                    window.innerWidth < 768;
+    return isMobile ? 'mobile' : 'pc';
+}
+
+function setDeviceType(deviceType) {
+    currentDeviceType = deviceType;
+    updateClipboardUI();
+    loadClipboard(); // Reload clipboard content for new device type
+
+    // Update button states
+    document.getElementById('deviceBtnPC').classList.toggle('active', deviceType === 'pc');
+    document.getElementById('deviceBtnMobile').classList.toggle('active', deviceType === 'mobile');
+
+    // Store preference in localStorage
+    localStorage.setItem('localBridgeDeviceType', deviceType);
+}
+
+function updateClipboardUI() {
+    const displayLabel = document.getElementById('clipboardDisplayLabel');
+    const inputLabel = document.getElementById('clipboardInputLabel');
+    const inputPlaceholder = document.getElementById('clipboardInput');
+    const setBtn = document.getElementById('setClipboardBtn');
+    const copyBtn = document.getElementById('copyBtn');
+
+    if (currentDeviceType === 'pc') {
+        displayLabel.textContent = 'Mobile Clipboard Content:';
+        inputLabel.textContent = 'Set PC Clipboard:';
+        inputPlaceholder.placeholder = 'Enter text to copy to PC clipboard';
+        setBtn.textContent = 'Copy to PC';
+        copyBtn.title = 'Copy to PC clipboard';
+    } else {
+        displayLabel.textContent = 'PC Clipboard Content:';
+        inputLabel.textContent = 'Set Mobile Clipboard:';
+        inputPlaceholder.placeholder = 'Enter text to copy to mobile clipboard';
+        setBtn.textContent = 'Copy to Mobile';
+        copyBtn.title = 'Copy to mobile clipboard';
+    }
+}
+
 // File upload functionality
 document.addEventListener('DOMContentLoaded', function() {
+    // Initialize device type
+    const savedDeviceType = localStorage.getItem('localBridgeDeviceType');
+    if (savedDeviceType) {
+        currentDeviceType = savedDeviceType;
+    } else {
+        currentDeviceType = detectDeviceType();
+    }
+
     loadFiles();
     loadClipboard();
     loadNotes();
-    
+    updateClipboardUI();
+
+    // Set initial button state
+    document.getElementById('deviceBtnPC').classList.toggle('active', currentDeviceType === 'pc');
+    document.getElementById('deviceBtnMobile').classList.toggle('active', currentDeviceType === 'mobile');
+
     // File input change
     document.getElementById('fileInput').addEventListener('change', function(e) {
         uploadFiles(e.target.files);
     });
-    
+
     // Drag and drop
     const uploadArea = document.getElementById('uploadArea');
     uploadArea.addEventListener('dragover', function(e) {
         e.preventDefault();
         uploadArea.classList.add('dragover');
     });
-    
+
     uploadArea.addEventListener('dragleave', function(e) {
         e.preventDefault();
         uploadArea.classList.remove('dragover');
     });
-    
+
     uploadArea.addEventListener('drop', function(e) {
         e.preventDefault();
         uploadArea.classList.remove('dragover');
         const files = e.dataTransfer.files;
         uploadFiles(files);
     });
-    
+
     // Notes auto-save and idle detection
     const notesTextarea = document.getElementById('notesContent');
     let notesTimeout;
     let notesIdleTimeout;
     let isNotesIdle = true;
     let notesRefreshInterval;
-    
+
     notesTextarea.addEventListener('input', function() {
         // Mark as not idle when user starts typing
         isNotesIdle = false;
-        
+
         // Clear existing timeouts
         clearTimeout(notesTimeout);
         clearTimeout(notesIdleTimeout);
-        
+
         // Set auto-save timeout
         notesTimeout = setTimeout(saveNotes, 500);
-        
+
         // Set idle timeout - resume refresh after 2 seconds of no typing
         notesIdleTimeout = setTimeout(() => {
             isNotesIdle = true;
         }, 2000);
     });
-    
+
     // Clipboard refresh every 2 seconds
     setInterval(refreshClipboard, 2000);
-    
+
     // Notes refresh with idle detection
     notesRefreshInterval = setInterval(() => {
         if (isNotesIdle) {
@@ -140,14 +198,16 @@ function loadFiles() {
 }
 
 function loadClipboard() {
-    fetch('/api/clipboard')
+    // PC shows mobile clipboard, mobile shows PC clipboard
+    const endpoint = currentDeviceType === 'pc' ? '/api/clipboard/mobile' : '/api/clipboard/pc';
+    fetch(endpoint)
         .then(response => response.json())
         .then(data => {
             const content = data.content || '';
             document.getElementById('clipboardContent').value = content;
         })
         .catch(error => {
-            console.error('Error loading clipboard:', error);
+            console.error(`Error loading ${currentDeviceType === 'pc' ? 'mobile' : 'PC'} clipboard:`, error);
         });
 }
 
@@ -158,8 +218,12 @@ function refreshClipboard() {
 function setClipboard() {
     const content = document.getElementById('clipboardInput').value;
     const statusDiv = document.getElementById('clipboardStatus');
-    
-    fetch('/api/clipboard', {
+
+    // PC sets PC clipboard, mobile sets mobile clipboard
+    const endpoint = currentDeviceType === 'pc' ? '/api/clipboard/pc' : '/api/clipboard/mobile';
+    const deviceName = currentDeviceType === 'pc' ? 'PC' : 'mobile';
+
+    fetch(endpoint, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -171,13 +235,28 @@ function setClipboard() {
         if (data.error) {
             throw new Error(data.error);
         }
-        showClipboardStatus('Clipboard updated successfully!', 'success');
+        showClipboardStatus(`${deviceName} clipboard updated successfully!`, 'success');
         document.getElementById('clipboardInput').value = '';
         loadClipboard();
     })
     .catch(error => {
-        showClipboardStatus('Failed to update clipboard: ' + error.message, 'danger');
+        showClipboardStatus(`Failed to update ${deviceName} clipboard: ${error.message}`, 'danger');
     });
+}
+
+function copyToClipboard() {
+    const content = document.getElementById('clipboardContent').value;
+    if (content) {
+        navigator.clipboard.writeText(content).then(() => {
+            const deviceName = currentDeviceType === 'pc' ? 'PC' : 'mobile';
+            showClipboardStatus(`Copied to ${deviceName} clipboard!`, 'success');
+        }).catch(err => {
+            console.error('Failed to copy: ', err);
+            showClipboardStatus('Failed to copy to clipboard', 'danger');
+        });
+    } else {
+        showClipboardStatus('No content to copy', 'warning');
+    }
 }
 
 function loadNotes() {
